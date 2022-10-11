@@ -1,13 +1,38 @@
+//LIBRARIES
 #include <Arduino.h>
-#define PIN_LED 5
+#define PIN_ADC 2
 
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+
+//EVENT-TIMER
+void IRAM_ATTR onTimer() {
+portENTER_CRITICAL(&timerMux);
+int data = analogRead(PIN_ADC);
+Serial.print(data);
+Serial.println("ADC_Value: " + String(data*3.4/4095.0)+"V");
+portEXIT_CRITICAL(&timerMux);
+}
+
+
+
+//INICIALIZATION
 void setup() {
-  pinMode(PIN_LED, OUTPUT);
+  //Serial
+  Serial.begin(9600);
+
+  //IOs
+  pinMode(PIN_ADC, OUTPUT);
+
+  //Timer
+  timer = timerBegin(0, 80, true);             //Clock preescaler
+  timerAttachInterrupt(timer, &onTimer, true);  //Define Event
+  timerAlarmWrite(timer, 3000000, true);        //N_of_Ticks
+  timerAlarmEnable(timer);
+  
 }
 
 void loop() {
-  digitalWrite(PIN_LED, HIGH);
-  delay(500);
-  digitalWrite(PIN_LED, LOW);
-  delay(500);
+sleep(1000);
 }
