@@ -14,7 +14,7 @@ portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 void IRAM_ATTR onTimer() {
 portENTER_CRITICAL(&timerMux);
 int data = analogRead(PIN_ADC);
-ledcWrite(LedChannel,1024);
+ledcWrite(LedChannel,data);
 Serial.println("ADC_Value: " + String(data*3.4/4095.0)+"V");
 portEXIT_CRITICAL(&timerMux);
 }
