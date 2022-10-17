@@ -1,52 +1,46 @@
 //LIBRARIES
-#include <Arduino.h>
-#include <GY_9250.h>
+#include <Arduino.h>  //Integra FreeRtos en si
 
 //DEFINES
-#define MPU_Adress 0x68
+#define PIN_LED 5
 
 
-MPU9250 IMU1;
-float buffer[3][10];
+//TAREAS
 
-void setup()
-{
-  Serial.begin (9600);  
-  Wire.begin (21, 22);   // sda= GPIO_21 /scl= GPIO_22
+  //"Hola mundo"
+void Tarea1( void * parameter ){
+  while(1){
+    Serial.println("Hola mundo");
+    delay(1000);
+  }
+  vTaskDelete( NULL );
+}
+
+  //Led Blink
+void Tarea2( void * parameter){
+  while(1){
+    digitalWrite(PIN_LED, HIGH);
+    delay(200);
+    digitalWrite(PIN_LED, LOW);
+    delay(200);
+  }
+  vTaskDelete( NULL );
 }
 
 
-void loop()
-{
-
-  //FILL
-  for (size_t i = 0; i < 10; i++)
-  {
-    for (size_t j = 0; j < 3; j++)
-    {
-      buffer[j][i]= IMU1.ReadAccel(j);
-    }
-    delay(100);
-  }
-
-  //PRINT
-  for (size_t i = 0; i < 3; i++)
-  {
-      Serial.println();
-      Serial.print("Axis-"+ String(i) +" data  --> ");
-    for (size_t j = 0; j < 10; j++)
-    {
-      Serial.print(String(buffer[i][j]));
-      Serial.print("\t, ");
-    }
-
-  }
-Serial.println();
-      
-
+//SETUP
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_LED, OUTPUT);
+  xTaskCreate(Tarea1,"Tarea1",1000,NULL,1,NULL);
+  xTaskCreate(Tarea2,"Tarea2",1000,NULL,1,NULL);
 
 }
 
 
+//MAIN LOOP
+void loop() {
+
+}
 
 
