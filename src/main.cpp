@@ -5,20 +5,10 @@
 //DEFINES
 #define MPU_Adress 0x68
 #define PIN_LED 5
-#define PIN_ADC 2
-#define PIN_PWM 17
-#define LedChannel 0
-#define PWM_f 5000
-#define PWM_res 12 //8,10,12,15
-
-
 
 //OBJECTS
 MPU9250 IMU1;
 float buffer[3][10];
-SemaphoreHandle_t mutex_UART = xSemaphoreCreateMutex();
-hw_timer_t * timer = NULL;
-portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
 
 
 
@@ -65,14 +55,6 @@ void loop() {
 void setup() {
   //Serial
   Serial.begin(115200);
-
-  //IOs
-  pinMode(PIN_ADC, OUTPUT);
-  pinMode(PIN_PWM, OUTPUT);
-
-  //PWM
-  ledcSetup(LedChannel, PWM_f, PWM_res);;
-  ledcAttachPin(PIN_PWM, LedChannel);
 
   //IOs
   pinMode(PIN_LED, OUTPUT);
