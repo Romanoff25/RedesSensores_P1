@@ -18,21 +18,19 @@ void Tarea1( void * parameter){
   
   while(1){
     delay(800);
-    //if(xSemaphoreTake(mutex_UART,0)==pdTRUE){
       digitalWrite(PIN_LED, LOW);
-      Serial.println();
+      
       for (size_t i = 0; i < 3; i++){
-          Serial.println();
-          Serial.print("Axis-"+ String(i) +" data  --> ");
-        for (size_t j = 0; j < 10; j++)
+          Serial.print(String(i) +",");
+        for (size_t j = 0; j < 9; j++)
         {
           Serial.print(String(buffer[i][j]));
-          Serial.print("\t, ");
+          Serial.print(",");
         }
+        Serial.print(String(buffer[i][9]));
+        Serial.print("\n");
         delay(200);
         digitalWrite(PIN_LED, HIGH);
-      //}
-      //xSemaphoreGive(mutex_UART);
     }
   }
   vTaskDelete( NULL );
