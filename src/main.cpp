@@ -1,46 +1,172 @@
 //LIBRARIES
-#include <Arduino.h>  //Integra FreeRtos en si
+#include <Arduino.h>  //Integrates FreeRTOS
+#include <GY_9250.h>
 
 //DEFINES
+#define MPU_Adress 0x68
 #define PIN_LED 5
+#define PIN_ADC 2
+#define PIN_PWM 17
+#define LedChannel 0
+#define PWM_f 5000
+#define PWM_res 12 //8,10,12,15
 
 
-//TAREAS
 
-  //"Hola mundo"
-void Tarea1( void * parameter ){
+//OBJECTS
+MPU9250 IMU1;
+float buffer[3][10];
+
+SemaphoreHandle_t mutex_UART = xSemaphoreCreateMutex();
+hw_timer_t * timer = NULL;
+portMUX_TYPE timerMux = portMUX_INITIALIZER_UNLOCKED;
+
+
+
+//TASKS
+  //ADC-Timed
+void IRAM_ATTR onTimer() {
+portENTER_CRITICAL(&timerMux);
+int data = analogRead(PIN_ADC);
+Serial.println();
+Serial.println("ADC_Value: " + String(data*3.4/4095.0)+"V");
+portEXIT_CRITICAL(&timerMux);
+}
+
+  //Buffer_2_UART
+void Tarea1( void * parameter){
+  
   while(1){
-    Serial.println("Hola mundo");
-    delay(1000);
+    delay(800);
+    //if(xSemaphoreTake(mutex_UART,0)==pdTRUE){
+      digitalWrite(PIN_LED, LOW);
+      Serial.println();
+      for (size_t i = 0; i < 3; i++){
+          Serial.println();
+          Serial.print("Axis-"+ String(i) +" data  --> ");
+        for (size_t j = 0; j < 10; j++)
+        {
+          Serial.print(String(buffer[i][j]));
+          Serial.print("\t, ");
+        }
+        delay(200);
+        digitalWrite(PIN_LED, HIGH);
+      //}
+      //xSemaphoreGive(mutex_UART);
+    }
   }
   vTaskDelete( NULL );
 }
 
-  //Led Blink
-void Tarea2( void * parameter){
-  while(1){
-    digitalWrite(PIN_LED, HIGH);
-    delay(200);
-    digitalWrite(PIN_LED, LOW);
-    delay(200);
+  //Command-Input
+void serialEvent() {
+  if(xSemaphoreTake(mutex_UART,0)==pdTRUE){
+  while (Serial.available()) {
+    String input = Serial.readStringUntil('\n');
+    input.trim();
+    int iBrackets = input.indexOf("(");
+
+
+    //WITHOUT BRACKETS
+    if(iBrackets==-1){
+      ////////
+        //ADC -> Devolver valor del ADC
+        if (input.startsWith("ADC")){
+          Serial.println();
+          Serial.println("ADC_Value: " + String(analogRead(PIN_ADC)*3.4/4095.0)+"V");
+        }
+
+        //Not valid Command
+        else{
+          Serial.println();
+          Serial.println("Not valid command");
+        }
+      ////////
+    }
+
+
+    //WITH BRAKETS
+    else if(input.endsWith(")")){
+      String header=input.substring(0,iBrackets);
+      String content=input.substring(iBrackets+1,input.length()-1);
+
+    ////////
+      //ADC -> Devolver valor del ADC cada s segundos (0 = parar envio)
+      if (header=="ADC"){
+        int ClockTime = content.toInt();
+        if(ClockTime){
+          timerAlarmWrite(timer, ClockTime*100000, true);        //N_of_Ticks
+          timerAlarmEnable(timer);
+          Serial.println();
+          Serial.println("ADC_timer: Enabled each " + String(ClockTime)+"s");
+        }else{
+          timerAlarmDisable(timer);
+          Serial.println();
+          Serial.println("ADC_timer: Disabled");
+        }
+      }
+
+      //PWM -> PWM al valor de x*10%  (Valore no validos x=0)
+      else if (header=="PWM"){
+        ledcWrite(LedChannel,(content.toInt()*4096.0/9.0));
+        Serial.println();
+        Serial.println("PWM_set_to: " + String(content.toInt()*100.0/9.0)+"%");
+      }
+
+      //Not valid Command
+      else {
+        Serial.println("Not valid command");
+      }
+    ////////
+
+    }
+
+    //NONE
+    else{
+      Serial.println();
+      Serial.println("Not valid input");
+    }
+
+
+    }
+    xSemaphoreGive(mutex_UART);
   }
-  vTaskDelete( NULL );
+}
+
+  //MAIN LOOP - MPU_2_Buffer
+void loop() {
+  for (size_t i = 0; i < 10; i++){
+    for (size_t j = 0; j < 3; j++)
+    {
+      buffer[j][i]= IMU1.ReadAccel(j);
+    }
+    delay(100);
+  }
 }
 
 
 //SETUP
 void setup() {
+  //Serial
   Serial.begin(115200);
+
+  //IOs
+  pinMode(PIN_ADC, OUTPUT);
+  pinMode(PIN_PWM, OUTPUT);
+
+  //PWM
+  ledcSetup(LedChannel, PWM_f, PWM_res);;
+  ledcAttachPin(PIN_PWM, LedChannel);
+
+  //IOs
   pinMode(PIN_LED, OUTPUT);
-  xTaskCreate(Tarea1,"Tarea1",1000,NULL,1,NULL);
-  xTaskCreate(Tarea2,"Tarea2",1000,NULL,1,NULL);
+  Wire.begin (21, 22); // sda= GPIO_21 /scl= GPIO_22
+
+  //FreeRTOS
+  xTaskCreate(Tarea1,"Buffer_2_UART",1000,NULL,1,NULL);
+
+  //Timer
+  timer = timerBegin(0, 800, true);             //Clock preescaler (to 10kHz)
+  timerAttachInterrupt(timer, &onTimer, true);  //Define Event
 
 }
-
-
-//MAIN LOOP
-void loop() {
-
-}
-
-
