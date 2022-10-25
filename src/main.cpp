@@ -1,64 +1,47 @@
-//LIBRARIES
-#include <Arduino.h>  //Integrates FreeRTOS
-#include <GY_9250.h>
+#include <WiFi.h>
+#include "time.h"
 
-//DEFINES
-#define MPU_Adress 0x68
-#define PIN_LED 5
+const char* ssid       = "RSense";
+const char* password   = "";
 
-//OBJECTS
-MPU9250 IMU1;
-float buffer[3][10];
+const char* ntpServer = "pool.ntp.org";
+const long  gmtOffset_sec = 3600;
+const int   daylightOffset_sec = 3600;
 
-
-
-//TASKS
-  //Buffer_2_UART (1s) (Task1)
-void Tarea1( void * parameter){
-  
-  while(1){
-    delay(800);
-      digitalWrite(PIN_LED, LOW);
-      
-      for (size_t i = 0; i < 3; i++){
-          Serial.print(String(i) +",");
-        for (size_t j = 0; j < 9; j++)
-        {
-          Serial.print(String(buffer[i][j]));
-          Serial.print(",");
-        }
-        Serial.print(String(buffer[i][9]));
-        Serial.print("\n");
-        delay(200);
-        digitalWrite(PIN_LED, HIGH);
-    }
+void printLocalTime()
+{
+  struct tm timeinfo;
+  if(!getLocalTime(&timeinfo)){
+    Serial.println("Failed to obtain time");
+    return;
   }
-  vTaskDelete( NULL );
+  Serial.println(&timeinfo, "%A, %B %d %Y %H:%M:%S");
 }
 
-  //MPU_2_Buffer (1ms) (MAIN LOOP)
-void loop() {
-  for (size_t i = 0; i < 10; i++){
-    for (size_t j = 0; j < 3; j++)
-    {
-      buffer[j][i]= IMU1.ReadAccel(j);
-    }
-    delay(100);
-  }
-}
-
-
-
-//SETUP
-void setup() {
-  //Serial
+void setup()
+{
   Serial.begin(115200);
+  
+  //connect to WiFi
+  Serial.printf("Connecting to %s ", ssid);
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+      delay(500);
+      Serial.print(".");
+  }
+  Serial.println(" CONNECTED");
+  
+  //init and get the time
+  configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  printLocalTime();
 
-  //IOs
-  pinMode(PIN_LED, OUTPUT);
-  Wire.begin (21, 22); // sda= GPIO_21 /scl= GPIO_22
+  //disconnect WiFi as it's no longer needed
+  WiFi.disconnect(true);
+  WiFi.mode(WIFI_OFF);
+}
 
-  //FreeRTOS
-  xTaskCreate(Tarea1,"Buffer_2_UART",1000,NULL,1,NULL);
-
+void loop()
+{
+  delay(1000);
+  printLocalTime();
 }
