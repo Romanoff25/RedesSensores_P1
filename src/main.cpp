@@ -69,13 +69,33 @@ void setup()
 //PRINT TIME LOOP
 void loop(){  
 
+  //>>>>>>>>CLIENT<<<<<<<<<<
+  client.connect(IP_Server, 65432);
 
-//>>>>>>>>CLIENT<<<<<<<<<<
-  if(client.connect(IP_Server, 65432)){
-    while(1){
+  bool fSend = 0;
+  String sServerRecived;
 
-      //PRINT TIME
+  while(client.connected()){
 
+    //READ
+    if(client.available()){
+      while(client.available()){
+        sServerRecived= sServerRecived+char(client.read());
+      }
+    }
+
+    //COMMAND -> "start"
+    if(sServerRecived =="start"){
+      fSend=1;
+    }
+
+    //COMMAND -> "stop"
+    if(sServerRecived =="stop"){
+      fSend=0;
+    }
+    
+    //PRINT TIME
+    if(fSend){
       struct tm timeinfo;
       getLocalTime(&timeinfo);
         //Data Format
@@ -88,15 +108,17 @@ void loop(){
       cData[5] = char(0x3a);
       cData[6] = char(timeinfo.tm_sec/10 + 0x30);
       cData[7] = char(timeinfo.tm_sec%10 + 0x30);
-      Serial.println(cData);
         //Send data
       client.write(cData);
       client.write("\n");
-
+        //Delay
       delay(1000);
     }
-    
+
+    //CLEAN READ
+    sServerRecived="";
   }
+
 
 }
 
