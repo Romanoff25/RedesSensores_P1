@@ -28,12 +28,6 @@ IPAddress IP_public;
 IPAddress IP_SubnetMask;
 
 
-//
-String hostName = "www.google.com";
-
-
-
-
 void setup()
 {
   Serial.begin(115200);
@@ -61,8 +55,6 @@ void setup()
 
   //Actualizar Hora
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-  
-    
 }
 
 
@@ -118,8 +110,6 @@ void loop(){
     //CLEAN READ
     sServerRecived="";
   }
-
-
 }
 
 
