@@ -4,11 +4,11 @@
 
 
 //GATEWAY DATA
-const char* ssid       = "RSense";
-const char* password   = "";
+//const char* ssid       = "RSense";
+//const char* password   = "";
 
-//const char* ssid       = "Vendo_Opel_Corsa";
-//const char* password   = "adangorron";
+const char* ssid       = "Vendo_Opel_Corsa";
+const char* password   = "adangorron";
 
 //SERVER
 //WiFiServer server(65432);
