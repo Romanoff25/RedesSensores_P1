@@ -1,17 +1,13 @@
 //LIBRERIES
 #include <WiFi.h>
 #include "time.h"
-
+#include "ArduinoJson.h"
+#include "ESP32Time.h"
+#include <ESP32_FTPClient.h>
 
 //GATEWAY DATA
-//const char* ssid       = "RSense";
-//const char* password   = "";
-
-const char* ssid       = "Vendo_Opel_Corsa";
-const char* password   = "adangorron";
-
-//SERVER
-//WiFiServer server(65432);
+const char* ssid       = "RSense";
+const char* password   = "";
 
 //CLIENT
 WiFiClient client;
@@ -22,10 +18,16 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 3600;
 const int   daylightOffset_sec = 3600;
 
-//IP DATA
-IPAddress IP_local;
-IPAddress IP_public;
-IPAddress IP_SubnetMask;
+//RTC
+ESP32Time rtc(0);
+
+//FTP
+char ftp_server[] = "155.210.150.77";
+char ftp_user[]   = "rsense";
+char ftp_pass[]   = "rsense";
+
+ESP32_FTPClient ftp (ftp_server,ftp_user,ftp_pass, 5000, 2);
+
 
 
 void setup()
@@ -45,72 +47,55 @@ void setup()
   Serial.println(" CONNECTED");
 
   //Save local IP
-  IP_local = WiFi.localIP();
-  IP_public = WiFi.gatewayIP();
-  IP_SubnetMask = WiFi.subnetMask();
-
-  Serial.print("Local:");  Serial.println(IP_local);
-  Serial.print("Public:"); Serial.println(IP_public);
-  Serial.print("Subnet:"); Serial.println(IP_SubnetMask);
+  Serial.print("Local:");  Serial.println(WiFi.localIP());
+  Serial.print("Public:"); Serial.println(WiFi.gatewayIP());
+  Serial.print("Subnet:"); Serial.println(WiFi.subnetMask());
 
   //Actualizar Hora
   configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
+  
 }
 
 
 //PRINT TIME LOOP
 void loop(){  
+ 
+//FTP
+  ftp.OpenConnection();
+  ftp.ChangeWorkDir("/rsense/765647");
+  ftp.InitFile("Type A");
 
-  //>>>>>>>>CLIENT<<<<<<<<<<
-  client.connect(IP_Server, 65432);
+    //New_File + Time
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
+  String file_name= String(timeinfo.tm_year%100) + "_" + String(timeinfo.tm_mday) + "_"+String(timeinfo.tm_hour) +":" + String(timeinfo.tm_min)+":"+ String(timeinfo.tm_sec) + ".json" ;
+  ftp.NewFile(file_name.c_str());
 
-  bool fSend = 0;
-  String sServerRecived;
+    //JSON
+  const int capacity = JSON_ARRAY_SIZE(4) + 15*JSON_OBJECT_SIZE(3);
+  StaticJsonDocument<capacity> doc;
 
-  while(client.connected()){
+  doc[0]["bn"] = "d1";
+  doc[0]["u"]   = rtc.getEpoch();
+  doc[0]["t"]   = "V";
+  doc[0]["v"]   = random();
 
-    //READ
-    if(client.available()){
-      while(client.available()){
-        sServerRecived= sServerRecived+char(client.read());
-      }
-    }
-
-    //COMMAND -> "start"
-    if(sServerRecived =="start"){
-      fSend=1;
-    }
-
-    //COMMAND -> "stop"
-    if(sServerRecived =="stop"){
-      fSend=0;
-    }
-    
-    //PRINT TIME
-    if(fSend){
-      struct tm timeinfo;
-      getLocalTime(&timeinfo);
-        //Data Format
-      char cData [16];
-      cData[0] = char(timeinfo.tm_hour/10 + 0x30);
-      cData[1] = char(timeinfo.tm_hour%10 + 0x30);
-      cData[2] = char(0x3a);
-      cData[3] = char(timeinfo.tm_min/10 + 0x30);
-      cData[4] = char(timeinfo.tm_min%10 + 0x30);
-      cData[5] = char(0x3a);
-      cData[6] = char(timeinfo.tm_sec/10 + 0x30);
-      cData[7] = char(timeinfo.tm_sec%10 + 0x30);
-        //Send data
-      client.write(cData);
-      client.write("\n");
-        //Delay
-      delay(1000);
-    }
-
-    //CLEAN READ
-    sServerRecived="";
+  for(int i=1 ; i<10 ; i++){
+    doc[i]["u"]   = "Cel";
+    doc[i]["t"]   = rtc.getEpoch();
+    doc[i]["v"]   = random();
   }
+
+  String output = doc.as<String>();
+  char buf[output.length()];
+  output.toCharArray(buf,output.length());
+
+    //Write JSON
+  ftp.Write(buf);
+  ftp.CloseFile();
+  ftp.CloseConnection();
+
+//Wait 10s
+delay(10000);
+
 }
-
-
-

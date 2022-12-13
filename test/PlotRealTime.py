@@ -9,11 +9,8 @@ import matplotlib.pyplot as plt
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
-
-
 #%%# Define
 path = r'C:\Users\usuario\OneDrive\Documentos\PlatformIO\Projects\RedesSensores_P1\test\log.csv'
-
 
 #%%#Inicializar Serial
 ser = serial.Serial('COM3')
@@ -40,9 +37,9 @@ while(1):
 
         if(it_0 + it <  time.time()):
             q= pd.read_csv(path).tail(15)
-            q0=q[q.iloc[:,0]=='0']
-            q1=q[q.iloc[:,0]=='1']
-            q2=q[q.iloc[:,0]=='2']
+            q0=q[q.iloc[:,0]==0]
+            q1=q[q.iloc[:,0]==1]
+            q2=q[q.iloc[:,0]==2]
             del q0['axis']
             del q1['axis']
             del q2['axis']
