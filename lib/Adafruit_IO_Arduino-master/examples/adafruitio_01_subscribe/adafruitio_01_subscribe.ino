@@ -1,4 +1,4 @@
-// Adafruit IO Publish Example
+// Adafruit IO Subscription Example
 //
 // Adafruit invests time and resources providing this open source code.
 // Please support Adafruit and open source hardware by purchasing
@@ -19,24 +19,8 @@
 
 /************************ Example Starts Here *******************************/
 
-// this int will hold the current count for our sketch
-int count = 0;
-
 // set up the 'counter' feed
 AdafruitIO_Feed *counter = io.feed("counter");
-
-
-// this function is called whenever a 'counter' message
-// is received from Adafruit IO. it was attached to
-// the counter feed in the setup() function above.
-void handleMessage(AdafruitIO_Data *data) {
-
-  Serial.print("received <- ");
-  Serial.println(data->value());
-
-}
-
-
 
 void setup() {
 
@@ -48,18 +32,9 @@ void setup() {
 
   Serial.print("Connecting to Adafruit IO");
 
-  // connect to io.adafruit.com
+  // start MQTT connection to io.adafruit.com
   io.connect();
 
-  // wait for a connection
-  while(io.status() < AIO_CONNECTED) {
-    Serial.print(".");
-    delay(500);
-  }
-
-
-
-//////////////////////////////////////////////////SUBS
   // set up a message handler for the count feed.
   // the handleMessage function (defined below)
   // will be called whenever a message is
@@ -74,17 +49,15 @@ void setup() {
     delay(500);
   }
 
-    // Because Adafruit IO doesn't support the MQTT retain flag, we can use the
+  // Because Adafruit IO doesn't support the MQTT retain flag, we can use the
   // get() function to ask IO to resend the last value for this feed to just
   // this MQTT client after the io client is connected.
   counter->get();
 
-
-
-///////////////////////////////////////////////////////
   // we are connected
   Serial.println();
   Serial.println(io.statusText());
+
 }
 
 void loop() {
@@ -95,21 +68,17 @@ void loop() {
   // io.adafruit.com, and processes any incoming data.
   io.run();
 
-  // save count to the 'counter' feed on Adafruit IO
-  Serial.print("sending -> ");
-  Serial.println(count);
-  counter->save(count);
-
-  // increment the count by 1
-  count++;
-
-  // Adafruit IO is rate limited for publishing, so a delay is required in
-  // between feed->save events. In this example, we will wait three seconds
-  // (1000 milliseconds == 1 second) during each loop.
-  delay(3000);
+  // Because this sketch isn't publishing, we don't need
+  // a delay() in the main program loop.
 
 }
 
+// this function is called whenever a 'counter' message
+// is received from Adafruit IO. it was attached to
+// the counter feed in the setup() function above.
+void handleMessage(AdafruitIO_Data *data) {
 
+  Serial.print("received <- ");
+  Serial.println(data->value());
 
-
+}
